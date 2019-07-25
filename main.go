@@ -97,6 +97,7 @@ func main() {
 	htmlDocument := `
 		<div id="mainDivId">
 			<h1>Head 1</h1>
+			<script>dsad</script>
 			<p>
 				paragraph text wit some <em class="underline">inline</em> elements
 			</p>
@@ -146,8 +147,8 @@ func domConverter(n *html.Node) {
 			switch nodeName {
 			case "SCRIPT":
 				attribute, error := getAttributeByName("type", n)
-				if error != nil || (attribute.Val != "application/ld+json") {
-					panic("implement")
+				if error != nil || (strings.ToUpper(attribute.Val) != strings.ToUpper("application/ld+json") && strings.ToUpper(attribute.Val) != strings.ToUpper("text/plain")) {
+					removeNode(n)
 				}
 			}
 		}
@@ -197,4 +198,13 @@ func getAttributeByName(look string, n *html.Node) (html.Attribute, error) {
 	}
 
 	return html.Attribute{}, errors.New("Not found")
+}
+
+func removeNode(n *html.Node) {
+	par := n.Parent
+	if par != nil {
+		par.RemoveChild(n)
+	} else {
+		panic("\nNode to remove has no Parent\n")
+	}
 }
