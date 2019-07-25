@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -114,9 +116,9 @@ func main() {
 
 func domConverter(n *html.Node) {
 	switch n.Type {
-	case html.ErrorNode:
-	case html.TextNode:
-	case html.DocumentNode:
+	// case html.ErrorNode:
+	// case html.TextNode:
+	// case html.DocumentNode:
 	case html.ElementNode:
 		/*
 			check the node type
@@ -138,9 +140,19 @@ func domConverter(n *html.Node) {
 				The javascript: schema is disallowed.
 
 		*/
-
-	case html.CommentNode:
-	case html.DoctypeNode:
+		nodeName := strings.ToUpper(n.Data)
+		exists, _ := in_array(nodeName, AllowedElements)
+		if !exists {
+			switch nodeName {
+			case "SCRIPT":
+				attribute, error := getAttributeByName("type", n)
+				if error != nil || (attribute.Val != "application/ld+json") {
+					panic("implement")
+				}
+			}
+		}
+		// case html.CommentNode:
+		// case html.DoctypeNode:
 		// case html.scopeMarkerNode:
 
 	}
@@ -156,6 +168,33 @@ func domConverter(n *html.Node) {
 	}
 }
 
-func elementNodeConverter(n *html.Node) {
+func in_array(val interface{}, array interface{}) (exists bool, index int) {
+	exists = false
+	index = -1
 
+	switch reflect.TypeOf(array).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(array)
+
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
+				index = i
+				exists = true
+				return
+			}
+		}
+	}
+
+	return
+}
+
+func getAttributeByName(look string, n *html.Node) (html.Attribute, error) {
+	attributes := n.Attr
+	for _, attr := range attributes {
+		if strings.ToUpper(attr.Key) == strings.ToUpper(look) {
+			return attr, nil
+		}
+	}
+
+	return html.Attribute{}, errors.New("Not found")
 }
