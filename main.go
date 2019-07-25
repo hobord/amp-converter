@@ -98,6 +98,7 @@ func main() {
 		<div id="mainDivId">
 			<h1>Head 1</h1>
 			<script>dsad</script>
+			<a href="javascript: alert()">hello</a>
 			<p>
 				paragraph text wit some <em class="underline">inline</em> elements
 			</p>
@@ -146,16 +147,19 @@ func domConverter(n *html.Node) {
 		if !exists {
 			switch nodeName {
 			case "SCRIPT":
-				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
-				attribute, error := getAttributeByName("type", n)
-				if error != nil {
-					removeNode(n)
-				} else {
-					exist, _ := in_array(strings.ToUpper(attribute.Val), allowedTypes)
-					if !exist {
-						removeNode(n)
-					}
-				}
+				// allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
+				// attribute, error := getAttributeByName("type", n)
+				// if error != nil {
+				// 	removeNode(n)
+				// } else {
+				// 	exist, _ := in_array(strings.ToUpper(attribute.Val), allowedTypes)
+				// 	if !exist {
+				// 		removeNode(n)
+				// 	}
+				// }
+			}
+		} else {
+			switch nodeName {
 			case "INPUT":
 				disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
 				attribute, error := getAttributeByName("type", n)
@@ -166,6 +170,12 @@ func domConverter(n *html.Node) {
 					}
 				}
 			case "A":
+				attribute, error := getAttributeByName("href", n)
+				if error == nil {
+					if strings.Contains(strings.ToLower(attribute.Val), "javascript:") {
+						attribute.Val = ""
+					}
+				}
 			}
 		}
 		// case html.CommentNode:
@@ -206,10 +216,10 @@ func in_array(val interface{}, array interface{}) (exists bool, index int) {
 }
 
 func getAttributeByName(look string, n *html.Node) (html.Attribute, error) {
-	attributes := n.Attr
-	for _, attr := range attributes {
+
+	for i, attr := range n.Attr {
 		if strings.ToUpper(attr.Key) == strings.ToUpper(look) {
-			return attr, nil
+			return n.Attr[i], nil
 		}
 	}
 
