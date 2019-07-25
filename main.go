@@ -10,6 +10,86 @@ import (
 
 )
 
+// AllowedElements contains all alllowed node elements
+var AllowedElements = []string{
+	"A",
+	"ABBR",
+	"ACRONYM",
+	"ADDRESS",
+	"B",
+	"BDO",
+	"BIG",
+	"BLOCKQUOTE",
+	"BODY",
+	"BR",
+	"BUTTON",
+	"CANVAS",
+	"CAPTION",
+	"CENTER",
+	"CITE",
+	"CODE",
+	"COL",
+	"COLGROUP",
+	"DD",
+	"DEL",
+	"DFN",
+	"DIR",
+	"DIV",
+	"DL",
+	"DT",
+	"EM",
+	"FIELDSET",
+	"FONT",
+	"FORM",
+	"H1",
+	"H2",
+	"H3",
+	"H4",
+	"H5",
+	"H6",
+	"HR",
+	"HTML",
+	"I",
+	"IMG",
+	"INPUT",
+	"INS",
+	"ISINDEX",
+	"KBD",
+	"LABEL",
+	"LEGEND",
+	"LI",
+	"LINK",
+	"MAP",
+	"MENU",
+	"NOSCRIPT",
+	"OL",
+	"OPTGROUP",
+	"OPTION",
+	"P",
+	"PRE",
+	"Q",
+	"S",
+	"SAMP",
+	"SELECT",
+	"SMALL",
+	"SPAN",
+	"STRIKE",
+	"STRONG",
+	"SUB",
+	"SUP",
+	"TABLE",
+	"TBODY",
+	"TD",
+	"TEXTAREA",
+	"TFOOT",
+	"TH",
+	"THEAD",
+	"TR",
+	"TT",
+	"U",
+	"UL",
+	"VAR"}
+
 func main() {
 	fmt.Println("App started")
 	htmlDocument := `
@@ -39,9 +119,23 @@ func domConverter(n *html.Node) {
 	case html.DocumentNode:
 	case html.ElementNode:
 		/*
-			 	check the node type
-				if it is not in the whitelist then convert it.
-				check the attributes
+			check the node type
+				script allowed inf the type is  "application/ld+json" or "text/plain"
+				"<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
+				<A href attribute value must not begin with javascript:
+			if it is not in the whitelist then convert it.  If set, the target attribute value must be _blank
+
+			check the attributes
+				Attribute names starting with on (such as onclick or onmouseover) are disallowed in AMP HTML.
+				XML-related attributes, such as xmlns, xml:lang, xml:base, and xml:space are disallowed in AMP HTML.
+				Internal AMP attributes prefixed with i-amp- are disallowed in AMP HTML.
+
+			check classes if present
+				Internal AMP class names prefixed with -amp- and i-amp- are disallowed in AMP HTML.
+			IDs
+				Internal AMP IDs prefixed with -amp- and i-amp- are disallowed in AMP HTML.
+			Links
+				The javascript: schema is disallowed.
 
 		*/
 
@@ -60,4 +154,8 @@ func domConverter(n *html.Node) {
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		domConverter(c)
 	}
+}
+
+func elementNodeConverter(n *html.Node) {
+
 }
