@@ -146,10 +146,26 @@ func domConverter(n *html.Node) {
 		if !exists {
 			switch nodeName {
 			case "SCRIPT":
+				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
 				attribute, error := getAttributeByName("type", n)
-				if error != nil || (strings.ToUpper(attribute.Val) != strings.ToUpper("application/ld+json") && strings.ToUpper(attribute.Val) != strings.ToUpper("text/plain")) {
+				if error != nil {
 					removeNode(n)
+				} else {
+					exist, _ := in_array(strings.ToUpper(attribute.Val), allowedTypes)
+					if !exist {
+						removeNode(n)
+					}
 				}
+			case "INPUT":
+				disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
+				attribute, error := getAttributeByName("type", n)
+				if error == nil {
+					exist, _ := in_array(strings.ToUpper(attribute.Val), disallowedTypes)
+					if exist {
+						removeNode(n)
+					}
+				}
+			case "A":
 			}
 		}
 		// case html.CommentNode:
