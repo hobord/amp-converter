@@ -156,6 +156,10 @@ func domConverter(n *html.Node) *html.Node {
 			if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >=0 {
 				return n;
 			}
+		case "IMG":
+			// convert image tag to amp-img
+			// if there is no width and hight then download the image and detect...
+			// use go routine with waitgroup parameter will n.
 		}
 
 
