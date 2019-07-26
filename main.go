@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"errors"
+	// "errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -96,10 +96,19 @@ func main() {
 	fmt.Println("App started")
 	htmlDocument := `
 		<div id="mainDivId">
-			<h1>Head 1</h1>
-			<script>dsad</script>
+			<h1 i-amp-="dsds">Head 1</h1>
+			<script>
+				<p>dsad</p>
+			</script>
+			<script type="application/ld+json">
+				<p>dsad</p>
+			</script>
 			<a href="javascript: alert()">hello</a>
-			<p>
+			<input>
+			<input type="button">
+			<span id="i-amp-">dsadas</span>
+			<p onmoUse="dss" class="-amp- bold">
+				<p xml="saa">fd</p>
 				paragraph text wit some <em class="underline">inline</em> elements
 			</p>
 		</div>
@@ -116,7 +125,7 @@ func main() {
 	fmt.Println(buf.String())
 }
 
-func domConverter(n *html.Node) {
+func domConverter(n *html.Node) *html.Node {
 	switch n.Type {
 	// case html.ErrorNode:
 	// case html.TextNode:
@@ -143,41 +152,72 @@ func domConverter(n *html.Node) {
 
 		*/
 		nodeName := strings.ToUpper(n.Data)
-		exists, _ := in_array(nodeName, AllowedElements)
-		if !exists {
+		exists := inArray(nodeName, AllowedElements)
+		if exists<0 {
 			switch nodeName {
 			case "SCRIPT":
-				// allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
-				// attribute, error := getAttributeByName("type", n)
-				// if error != nil {
-				// 	removeNode(n)
-				// } else {
-				// 	exist, _ := in_array(strings.ToUpper(attribute.Val), allowedTypes)
-				// 	if !exist {
-				// 		removeNode(n)
-				// 	}
-				// }
+				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
+				attribute := getAttributeByName("type", n)
+				if attribute == nil || inArray(strings.ToUpper(attribute.Val), allowedTypes) < 0 {
+					return n;
+				}
 			}
 		} else {
 			switch nodeName {
 			case "INPUT":
 				disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
-				attribute, error := getAttributeByName("type", n)
-				if error == nil {
-					exist, _ := in_array(strings.ToUpper(attribute.Val), disallowedTypes)
-					if exist {
-						removeNode(n)
-					}
-				}
-			case "A":
-				attribute, error := getAttributeByName("href", n)
-				if error == nil {
-					if strings.Contains(strings.ToLower(attribute.Val), "javascript:") {
-						attribute.Val = ""
-					}
+				attribute := getAttributeByName("type", n)
+				if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >=0 {
+					return n;
 				}
 			}
 		}
+
+		// check attributes
+		attributes := []html.Attribute{}
+		for i := range n.Attr {
+			// javascript is not allowed
+			if (strings.HasPrefix(strings.ToLower(n.Attr[i].Val), "javascript:")) {
+				continue
+			}
+
+			// Attribute names starting with on (such as onclick or onmouseover) are disallowed in AMP HTML.
+			if (strings.HasPrefix(strings.ToLower(n.Attr[i].Key), "on")) {
+				continue
+			}
+
+			// XML-related attributes, such as xmlns, xml:lang, xml:base, and xml:space are disallowed in AMP HTML.
+			if (strings.HasPrefix(strings.ToLower(n.Attr[i].Key), "xml")) {
+				continue
+			}
+			// Internal AMP attributes prefixed with i-amp- are disallowed in AMP HTML.
+			if (strings.HasPrefix(strings.ToLower(n.Attr[i].Key), "i-amp-")) {
+				continue
+			}
+
+			// check the classess
+			if strings.ToLower(n.Attr[i].Key) == "class" {
+				classes := []string{}
+				for _, className := range strings.Fields(n.Attr[i].Val) {
+					// Internal AMP class names prefixed with -amp- and i-amp- are disallowed in AMP HTML.
+					if strings.HasPrefix(className, "-amp-") || strings.HasPrefix(className, "i-amp-") {
+						continue
+					}
+					classes = append(classes, className)
+				}
+				n.Attr[i].Val = strings.Join(classes, " ")
+			}
+
+			// Internal AMP IDs prefixed with -amp- and i-amp- are disallowed in AMP HTML.
+			if strings.ToLower(n.Attr[i].Key) == "id" {
+				if strings.HasPrefix(strings.ToLower(n.Attr[i].Val), "-amp-") || strings.HasPrefix(strings.ToLower(n.Attr[i].Val), "i-amp-") {
+					continue
+				}
+			}
+			
+			attributes = append(attributes, n.Attr[i])
+		}
+		n.Attr = attributes
 		// case html.CommentNode:
 		// case html.DoctypeNode:
 		// case html.scopeMarkerNode:
@@ -190,14 +230,19 @@ func domConverter(n *html.Node) {
 	if n.Data == "Head 1" {
 		n.Data = "Head modifyed"
 	}
+	
+	var remove *html.Node
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		domConverter(c)
+		if (remove !=nil) {
+			removeNode(remove)
+			remove = nil
+		}
+		remove = domConverter(c)
 	}
+	return nil
 }
 
-func in_array(val interface{}, array interface{}) (exists bool, index int) {
-	exists = false
-	index = -1
+func inArray(val interface{}, array interface{}) int {
 
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Slice:
@@ -205,25 +250,23 @@ func in_array(val interface{}, array interface{}) (exists bool, index int) {
 
 		for i := 0; i < s.Len(); i++ {
 			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
-				index = i
-				exists = true
-				return
+				return i
 			}
 		}
 	}
 
-	return
+	return -1
 }
 
-func getAttributeByName(look string, n *html.Node) (html.Attribute, error) {
+func getAttributeByName(look string, n *html.Node) (*html.Attribute) {
 
-	for i, attr := range n.Attr {
-		if strings.ToUpper(attr.Key) == strings.ToUpper(look) {
-			return n.Attr[i], nil
+	for i := range n.Attr {
+		if strings.ToUpper(n.Attr[i].Key) == strings.ToUpper(look) {
+			return &n.Attr[i]
 		}
 	}
 
-	return html.Attribute{}, errors.New("Not found")
+	return nil
 }
 
 func removeNode(n *html.Node) {
@@ -231,6 +274,6 @@ func removeNode(n *html.Node) {
 	if par != nil {
 		par.RemoveChild(n)
 	} else {
-		panic("\nNode to remove has no Parent\n")
+		panic("\nNode to remove has no Parent\n") // TODO: do not panic
 	}
 }
