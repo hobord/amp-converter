@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"golang.org/x/net/html"
+	cache "github.com/hobord/amp-converter/cache"
 )
 
 // AllowedElements contains all alllowed node elements
@@ -91,7 +92,7 @@ var AllowedElements = []string{
 	"VAR"}
 
 // Converter is convert html to amp
-func Converter(htmlDocument string, baseUrl string) string {
+func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 	doc, err := html.Parse(strings.NewReader(htmlDocument))
 	if err != nil {
 		log.Fatal(err) // TODO: do not use fatal
@@ -100,7 +101,7 @@ func Converter(htmlDocument string, baseUrl string) string {
 	var wg sync.WaitGroup
 	deleteNodes := []*html.Node{}
 
-	convertNode(doc, baseUrl, &deleteNodes, &wg)
+	convertNode(doc, baseUrl, ch, &deleteNodes, &wg)
 	wg.Wait()
 
 	for _, n := range deleteNodes {
@@ -113,7 +114,7 @@ func Converter(htmlDocument string, baseUrl string) string {
 }
 
 // Converter convert the html.Node tree to AMP node tree.
-func convertNode(n *html.Node, baseUrl string, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
+func convertNode(n *html.Node, baseUrl string, ch cache.Cache,  deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 	switch n.Type {
 	case html.ErrorNode:
 		*deleteNodes = append(*deleteNodes, n)
@@ -198,13 +199,13 @@ func convertNode(n *html.Node, baseUrl string, deleteNodes *[]*html.Node, wg *sy
 		case "IMG":
 			// convert image tag to amp-img
 			wg.Add(1)
-			go func(n *html.Node) {
-				if !ImageConverter(n, baseUrl) {
+			go func(n *html.Node, ch cache.Cache) {
+				if !ImageConverter(n, baseUrl, ch) {
 					// image conversion was fail, remove the image
 					*deleteNodes = append(*deleteNodes, n)
 				}
 				wg.Done()
-			}(n)
+			}(n, ch)
 			return
 		}
 
@@ -214,7 +215,7 @@ func convertNode(n *html.Node, baseUrl string, deleteNodes *[]*html.Node, wg *sy
 	}
 
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		convertNode(c, baseUrl, deleteNodes, wg)
+		convertNode(c, baseUrl, ch, deleteNodes, wg)
 	}
 }
 

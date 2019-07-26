@@ -11,10 +11,11 @@ import (
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/html"
+	cache "github.com/hobord/amp-converter/cache"
 )
 
 // ImageConverter is convert the image html.node to amp html.node return true if success
-func ImageConverter(n *html.Node, baseUrl string) bool {
+func ImageConverter(n *html.Node, baseUrl string, ch cache.Cache) bool {
 	/**
 	 	Check the image sizes
 		If width is not set or % type then the image layout is responsive and You should download for get the sizes

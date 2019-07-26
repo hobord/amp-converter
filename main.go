@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	amp "github.com/hobord/amp-converter/converter"
+	cache "github.com/hobord/amp-converter/cache"
 
 )
 
@@ -32,7 +33,9 @@ func main() {
 		</div>
 	`
 	baseUrl := ""
-	fmt.Println(amp.Converter(htmlDocument, baseUrl))
+	var ch cache.Cache
+	ch = nil
+	fmt.Println(amp.Converter(htmlDocument, baseUrl, ch))
 }
 
 // func domConverter(n *html.Node) *html.Node {
