@@ -3,6 +3,9 @@ package converter
 import (
 	"fmt"
 	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"net/http"
 	"strings"
 
@@ -10,7 +13,7 @@ import (
 )
 
 // ImageConverter is convert the image html.node to amp html.node return true if success
-func ImageConverter(n *html.Node) bool {
+func ImageConverter(n *html.Node, baseUrl string) bool {
 	/**
 	 	Check the image sizes
 		If width is not set or % type then the image layout is responsive and You should download for get the sizes
@@ -37,9 +40,8 @@ func ImageConverter(n *html.Node) bool {
 		layoutResponsive = true
 
 		n.Attr = append(n.Attr, html.Attribute{"", "width", ""})
-		widthAttr = GetAttributeByName("width", n)
-
 		n.Attr = append(n.Attr, html.Attribute{"", "height", ""})
+		widthAttr = GetAttributeByName("width", n)
 		heightAttr = GetAttributeByName("height", n)
 	}
 
@@ -50,6 +52,16 @@ func ImageConverter(n *html.Node) bool {
 	if heightAttr.Val == "" || strings.Contains(heightAttr.Val, "%") {
 		layoutResponsive = true
 	}
+
+	// ampImg := &html.Node{
+	// 	Parent:      n.Parent,
+	// 	PrevSibling: n.PrevSibling,
+	// 	NextSibling: n.NextSibling,
+	// 	Type:        n.Type,
+	// 	DataAtom:    n.DataAtom,
+	// 	Data:        "amp-img",
+	// 	Attr:        []html.Attribute{},
+	// }
 
 	if layoutResponsive {
 		image := getImage(attr.Val)
@@ -66,8 +78,10 @@ func ImageConverter(n *html.Node) bool {
 			heightAttr.Val = fmt.Sprintf("%d", size.Y)
 		}
 
+		n.Attr = append(n.Attr, html.Attribute{"", "layout", "responsive"}) // TODO: check if is already exists
 	}
 
+	n.Data = "amp-img"
 	return true
 }
 

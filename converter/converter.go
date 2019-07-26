@@ -91,7 +91,7 @@ var AllowedElements = []string{
 	"VAR"}
 
 // Converter is convert html to amp
-func Converter(htmlDocument string) string {
+func Converter(htmlDocument string, baseUrl string) string {
 	doc, err := html.Parse(strings.NewReader(htmlDocument))
 	if err != nil {
 		log.Fatal(err) // TODO: do not use fatal
@@ -100,7 +100,7 @@ func Converter(htmlDocument string) string {
 	var wg sync.WaitGroup
 	deleteNodes := []*html.Node{}
 
-	convertNode(doc, &deleteNodes, &wg)
+	convertNode(doc, baseUrl, &deleteNodes, &wg)
 	wg.Wait()
 
 	for _, n := range deleteNodes {
@@ -113,7 +113,7 @@ func Converter(htmlDocument string) string {
 }
 
 // Converter convert the html.Node tree to AMP node tree.
-func convertNode(n *html.Node, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
+func convertNode(n *html.Node, baseUrl string, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 	switch n.Type {
 	// case html.ErrorNode:
 	// case html.TextNode:
@@ -198,7 +198,7 @@ func convertNode(n *html.Node, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 			// convert image tag to amp-img
 			wg.Add(1)
 			go func(n *html.Node) {
-				if !ImageConverter(n) {
+				if !ImageConverter(n, baseUrl) {
 					// image conversion was fail, remove the image
 					*deleteNodes = append(*deleteNodes, n)
 				}
@@ -213,7 +213,7 @@ func convertNode(n *html.Node, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 	}
 
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		convertNode(c, deleteNodes, wg)
+		convertNode(c, baseUrl, deleteNodes, wg)
 	}
 }
 

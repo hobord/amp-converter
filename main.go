@@ -1,11 +1,11 @@
 package main
 
 import (
-
 	// "errors"
 	"fmt"
 
 	amp "github.com/hobord/amp-converter/converter"
+
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 			<a href="javascript: alert()">hello</a>
 			<input>
 			<input type="button">
-			<image src="">
+			<image src="http://p.agnihotry.com/images/avatar-icon.jpeg">
 			<span id="i-amp-">dsadas</span>
 			<p onmoUse="dss" class="-amp- bold">
 				<p xml="saa">fd</p>
@@ -31,7 +31,8 @@ func main() {
 			</p>
 		</div>
 	`
-	fmt.Println(amp.Converter(htmlDocument))
+	baseUrl := ""
+	fmt.Println(amp.Converter(htmlDocument, baseUrl))
 }
 
 // func domConverter(n *html.Node) *html.Node {
