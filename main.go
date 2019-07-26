@@ -103,6 +103,7 @@ func main() {
 			<script type="application/ld+json">
 				<p>dsad</p>
 			</script>
+			<applet>java applet</applet>
 			<a href="javascript: alert()">hello</a>
 			<input>
 			<input type="button">
@@ -131,47 +132,32 @@ func domConverter(n *html.Node) *html.Node {
 	// case html.TextNode:
 	// case html.DocumentNode:
 	case html.ElementNode:
-		/*
-			check the node type
-				script allowed inf the type is  "application/ld+json" or "text/plain"
-				"<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
-				<A href attribute value must not begin with javascript:
-			if it is not in the whitelist then convert it.  If set, the target attribute value must be _blank
-
-			check the attributes
-				Attribute names starting with on (such as onclick or onmouseover) are disallowed in AMP HTML.
-				XML-related attributes, such as xmlns, xml:lang, xml:base, and xml:space are disallowed in AMP HTML.
-				Internal AMP attributes prefixed with i-amp- are disallowed in AMP HTML.
-
-			check classes if present
-				Internal AMP class names prefixed with -amp- and i-amp- are disallowed in AMP HTML.
-			IDs
-				Internal AMP IDs prefixed with -amp- and i-amp- are disallowed in AMP HTML.
-			Links
-				The javascript: schema is disallowed.
-
-		*/
 		nodeName := strings.ToUpper(n.Data)
 		exists := inArray(nodeName, AllowedElements)
 		if exists<0 {
 			switch nodeName {
 			case "SCRIPT":
+				// script allowed inf the type is  "application/ld+json" or "text/plain"
 				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
 				attribute := getAttributeByName("type", n)
 				if attribute == nil || inArray(strings.ToUpper(attribute.Val), allowedTypes) < 0 {
 					return n;
 				}
+				return nil
 			}
-		} else {
-			switch nodeName {
-			case "INPUT":
-				disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
-				attribute := getAttributeByName("type", n)
-				if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >=0 {
-					return n;
-				}
+			return n
+		}
+		
+		switch nodeName {
+		case "INPUT":
+			// "<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
+			disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
+			attribute := getAttributeByName("type", n)
+			if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >=0 {
+				return n;
 			}
 		}
+
 
 		// check attributes
 		attributes := []html.Attribute{}
