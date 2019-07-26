@@ -1,8 +1,11 @@
 package converter
 
 import (
+	"bytes"
+	"log"
 	"reflect"
 	"strings"
+	"sync"
 
 	"golang.org/x/net/html"
 )
@@ -87,43 +90,35 @@ var AllowedElements = []string{
 	"UL",
 	"VAR"}
 
-// Converter convert the html.Node tree to AMP node tree
-func Converter(n *html.Node) *html.Node {
+// Converter is convert html to amp
+func Converter(htmlDocument string) string {
+	doc, err := html.Parse(strings.NewReader(htmlDocument))
+	if err != nil {
+		log.Fatal(err) // TODO: do not use fatal
+	}
+
+	var wg sync.WaitGroup
+	deleteNodes := []*html.Node{}
+
+	convertNode(doc, &deleteNodes, &wg)
+	wg.Wait()
+
+	for _, n := range deleteNodes {
+		removeNode(n)
+	}
+
+	buf := new(bytes.Buffer)
+	html.Render(buf, doc)
+	return buf.String()
+}
+
+// Converter convert the html.Node tree to AMP node tree.
+func convertNode(n *html.Node, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 	switch n.Type {
 	// case html.ErrorNode:
 	// case html.TextNode:
 	// case html.DocumentNode:
 	case html.ElementNode:
-		nodeName := strings.ToUpper(n.Data)
-		exists := inArray(nodeName, AllowedElements)
-		if exists < 0 {
-			switch nodeName {
-			case "SCRIPT":
-				// script allowed inf the type is  "application/ld+json" or "text/plain"
-				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
-				attribute := getAttributeByName("type", n)
-				if attribute == nil || inArray(strings.ToUpper(attribute.Val), allowedTypes) < 0 {
-					return n
-				}
-				return nil
-			}
-			return n
-		}
-
-		switch nodeName {
-		case "INPUT":
-			// "<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
-			disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
-			attribute := getAttributeByName("type", n)
-			if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >= 0 {
-				return n
-			}
-		case "IMG":
-			// convert image tag to amp-img
-			// if there is no width and hight then download the image and detect...
-			// use go routine with waitgroup parameter will n.
-		}
-
 		// check attributes
 		attributes := []html.Attribute{}
 		for i := range n.Attr {
@@ -169,28 +164,57 @@ func Converter(n *html.Node) *html.Node {
 			attributes = append(attributes, n.Attr[i])
 		}
 		n.Attr = attributes
+
+		nodeName := strings.ToUpper(n.Data)
+		// if the node type not allowed then convert or remove
+		exists := inArray(nodeName, AllowedElements)
+		if exists < 0 {
+			switch nodeName {
+			case "SCRIPT":
+				// script allowed inf the type is  "application/ld+json" or "text/plain"
+				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
+				attribute := GetAttributeByName("type", n)
+				if attribute == nil || inArray(strings.ToUpper(attribute.Val), allowedTypes) < 0 {
+					*deleteNodes = append(*deleteNodes, n)
+					return
+				}
+				return
+			}
+			*deleteNodes = append(*deleteNodes, n)
+			return
+		}
+
+		// Some node type is partial allowed need conversion or check
+		switch nodeName {
+		case "INPUT":
+			// "<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
+			disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
+			attribute := GetAttributeByName("type", n)
+			if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >= 0 {
+				*deleteNodes = append(*deleteNodes, n)
+				return
+			}
+		case "IMG":
+			// convert image tag to amp-img
+			wg.Add(1)
+			go func(n *html.Node) {
+				if !ImageConverter(n) {
+					// image conversion was fail, remove the image
+					*deleteNodes = append(*deleteNodes, n)
+				}
+				wg.Done()
+			}(n)
+			return
+		}
+
 		// case html.CommentNode:
 		// case html.DoctypeNode:
 		// case html.scopeMarkerNode:
-
 	}
 
-	// fmt.Println(n.Type)
-	// fmt.Println(n.Data)
-	// fmt.Println(n.Attr)
-	// if n.Data == "Head 1" {
-	// 	n.Data = "Head modifyed"
-	// }
-
-	var remove *html.Node
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if remove != nil {
-			removeNode(remove)
-			remove = nil
-		}
-		remove = Converter(c)
+		convertNode(c, deleteNodes, wg)
 	}
-	return nil
 }
 
 func inArray(val interface{}, array interface{}) int {
@@ -209,7 +233,8 @@ func inArray(val interface{}, array interface{}) int {
 	return -1
 }
 
-func getAttributeByName(look string, n *html.Node) *html.Attribute {
+// GetAttributeByName return the node attribute
+func GetAttributeByName(look string, n *html.Node) *html.Attribute {
 
 	for i := range n.Attr {
 		if strings.ToUpper(n.Attr[i].Key) == strings.ToUpper(look) {

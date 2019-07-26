@@ -1,18 +1,12 @@
 package main
 
 import (
-	"bytes"
+
 	// "errors"
 	"fmt"
-	"log"
-	"strings"
-
-	"golang.org/x/net/html"
 
 	amp "github.com/hobord/amp-converter/converter"
-
 )
-
 
 func main() {
 	fmt.Println("App started")
@@ -29,6 +23,7 @@ func main() {
 			<a href="javascript: alert()">hello</a>
 			<input>
 			<input type="button">
+			<image src="">
 			<span id="i-amp-">dsadas</span>
 			<p onmoUse="dss" class="-amp- bold">
 				<p xml="saa">fd</p>
@@ -36,16 +31,7 @@ func main() {
 			</p>
 		</div>
 	`
-	// fmt.Println(htmlDocument)
-	doc, err := html.Parse(strings.NewReader(htmlDocument))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	amp.Converter(doc)
-	buf := new(bytes.Buffer)
-	html.Render(buf, doc)
-	fmt.Println(buf.String())
+	fmt.Println(amp.Converter(htmlDocument))
 }
 
 // func domConverter(n *html.Node) *html.Node {
@@ -69,7 +55,7 @@ func main() {
 // 			}
 // 			return n
 // 		}
-		
+
 // 		switch nodeName {
 // 		case "INPUT":
 // 			// "<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
@@ -83,7 +69,6 @@ func main() {
 // 			// if there is no width and hight then download the image and detect...
 // 			// use go routine with waitgroup parameter will n.
 // 		}
-
 
 // 		// check attributes
 // 		attributes := []html.Attribute{}
@@ -126,7 +111,7 @@ func main() {
 // 					continue
 // 				}
 // 			}
-			
+
 // 			attributes = append(attributes, n.Attr[i])
 // 		}
 // 		n.Attr = attributes
@@ -142,7 +127,7 @@ func main() {
 // 	if n.Data == "Head 1" {
 // 		n.Data = "Head modifyed"
 // 	}
-	
+
 // 	var remove *html.Node
 // 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 // 		if (remove != nil) {
