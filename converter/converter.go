@@ -115,7 +115,8 @@ func Converter(htmlDocument string, baseUrl string) string {
 // Converter convert the html.Node tree to AMP node tree.
 func convertNode(n *html.Node, baseUrl string, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 	switch n.Type {
-	// case html.ErrorNode:
+	case html.ErrorNode:
+		*deleteNodes = append(*deleteNodes, n)
 	// case html.TextNode:
 	// case html.DocumentNode:
 	case html.ElementNode:
