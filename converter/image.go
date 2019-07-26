@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pkg/errors"
 	"golang.org/x/net/html"
 )
 
@@ -64,12 +65,10 @@ func ImageConverter(n *html.Node, baseUrl string) bool {
 	// }
 
 	if layoutResponsive {
-		image := getImage(attr.Val)
-		if image == nil {
+		size, error := getImageSize(attr.Val)
+		if error != nil {
 			return false
 		}
-		bounds := image.Bounds()
-		size := bounds.Size()
 
 		if widthAttr.Val != "" && strings.Contains(widthAttr.Val, "%") {
 			// calculate ratio
@@ -83,6 +82,15 @@ func ImageConverter(n *html.Node, baseUrl string) bool {
 
 	n.Data = "amp-img"
 	return true
+}
+
+func getImageSize(url string) (image.Point, error) {
+	img := getImage(url)
+	if img == nil {
+		return image.Point{0, 0}, errors.New("Cant get image")
+	}
+	bounds := img.Bounds()
+	return bounds.Size(), nil
 }
 
 func getImage(url string) image.Image {
