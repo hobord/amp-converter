@@ -30,15 +30,15 @@ func main() {
 			<p onmoUse="dss" class="-amp- bold">
 			<iframe width="560" height="315" src="https://www.youtube.com/embed/9nqcFhD3wz0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 			<p xml="saa">fd</p>
-				<image src="http://p.agnihotry.com/images/avatar-icon.jpeg">
+				<image src="/images/avatar-icon.jpeg">
 				paragraph text wit some <em class="underline">inline</em> elements
 			</p>
 		</div>
 	`
-	baseUrl := ""
+	baseURL := "http://p.agnihotry.com"
 	var ch cache.Cache
 	ch = newInMemoryCache(60 * time.Second)
-	fmt.Println(amp.Converter(htmlDocument, baseUrl, ch))
+	fmt.Println(amp.Converter(htmlDocument, baseURL, ch))
 }
 
 var newInMemoryCache = func(defaultExpiration time.Duration) cache.Cache {

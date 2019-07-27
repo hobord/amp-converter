@@ -94,14 +94,14 @@ var AllowedElements = []string{
 
 type toConvert struct {
 	node        *html.Node
-	baseUrl     string
+	baseURL     string
 	ch          cache.Cache
 	deleteNodes *[]*html.Node
 	wg          *sync.WaitGroup
 }
 
 // Converter is convert html to amp
-func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
+func Converter(htmlDocument string, baseURL string, ch cache.Cache) string {
 	doc, err := html.Parse(strings.NewReader(htmlDocument))
 	if err != nil {
 		log.Fatal(err) // TODO: do not use fatal
@@ -111,10 +111,10 @@ func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 	deleteNodes := []*html.Node{}
 	// toHeader := []strings
 
-	// convertNode(doc, baseUrl, ch, &deleteNodes, &wg)
+	// convertNode(doc, baseURL, ch, &deleteNodes, &wg)
 	convertNode(toConvert{
 		doc,
-		baseUrl,
+		baseURL,
 		ch,
 		&deleteNodes,
 		&wg})
@@ -130,7 +130,7 @@ func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 }
 
 // Converter convert the html.Node tree to AMP node tree.
-// func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
+// func convertNode(n *html.Node, baseURL string, ch cache.Cache, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 func convertNode(convertParams toConvert) {
 	switch convertParams.node.Type {
 	case html.ErrorNode:
@@ -226,13 +226,13 @@ func convertNode(convertParams toConvert) {
 		case "IMG":
 			// convert image tag to amp-img
 			convertParams.wg.Add(1)
-			go func(n *html.Node, baseUrl string, ch cache.Cache) {
-				if !ImageConverter(n, baseUrl, ch) {
+			go func(n *html.Node, baseURL string, ch cache.Cache) {
+				if !ImageConverter(n, baseURL, ch) {
 					// image conversion was fail, remove the image
 					*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 				}
 				convertParams.wg.Done()
-			}(convertParams.node, convertParams.baseUrl, convertParams.ch)
+			}(convertParams.node, convertParams.baseURL, convertParams.ch)
 			return
 		}
 
@@ -244,7 +244,7 @@ func convertNode(convertParams toConvert) {
 	for c := convertParams.node.FirstChild; c != nil; c = c.NextSibling {
 		convertNode(toConvert{
 			c,
-			convertParams.baseUrl,
+			convertParams.baseURL,
 			convertParams.ch,
 			convertParams.deleteNodes,
 			convertParams.wg})

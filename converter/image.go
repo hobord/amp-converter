@@ -18,7 +18,7 @@ import (
 )
 
 // ImageConverter is convert the image html.node to amp html.node return true if success
-func ImageConverter(n *html.Node, baseUrl string, ch cache.Cache) bool {
+func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 	/**
 	 	Check the image sizes
 		If width is not set or % type then the image layout is responsive and You should download for get the sizes
@@ -36,6 +36,10 @@ func ImageConverter(n *html.Node, baseUrl string, ch cache.Cache) bool {
 	}
 	if attr.Val == "" {
 		return false
+	}
+	// TODO: check the url is relative? if yes, then add baseURL
+	if !strings.HasPrefix(strings.ToLower(attr.Val), "http") {
+		attr.Val = baseURL + attr.Val
 	}
 
 	layoutResponsive := false
@@ -94,8 +98,10 @@ func getImageSize(url string, ch cache.Cache) (image.Point, error) {
 	h := sha256.New()
 	h.Write([]byte(url))
 	key := fmt.Sprintf("%x", h.Sum(nil))
-
-	err := ch.Get(key, &size)
+	err := errors.New("No Cahce")
+	if ch != nil {
+		err = ch.Get(key, &size)
+	}
 	if err != nil {
 		img := getImage(url)
 		if img == nil {
@@ -103,7 +109,9 @@ func getImageSize(url string, ch cache.Cache) (image.Point, error) {
 		}
 		bounds := img.Bounds()
 		size = bounds.Size()
-		ch.Set(key, size, 24*time.Hour)
+		if ch != nil {
+			ch.Set(key, size, 24*time.Hour)
+		}
 	}
 	return size, nil
 }
