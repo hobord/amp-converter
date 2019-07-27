@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -8,9 +9,11 @@ import (
 	_ "image/png"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/html"
+
 	cache "github.com/hobord/amp-converter/cache"
 )
 
@@ -66,7 +69,7 @@ func ImageConverter(n *html.Node, baseUrl string, ch cache.Cache) bool {
 	// }
 
 	if layoutResponsive {
-		size, error := getImageSize(attr.Val)
+		size, error := getImageSize(attr.Val, ch)
 		if error != nil {
 			return false
 		}
@@ -85,13 +88,25 @@ func ImageConverter(n *html.Node, baseUrl string, ch cache.Cache) bool {
 	return true
 }
 
-func getImageSize(url string) (image.Point, error) {
-	img := getImage(url)
-	if img == nil {
-		return image.Point{0, 0}, errors.New("Cant get image")
+func getImageSize(url string, ch cache.Cache) (image.Point, error) {
+	size := image.Point{0, 0}
+
+	h := sha256.New()
+	h.Write([]byte(url))
+	key := fmt.Sprintf("%x", h.Sum(nil))
+
+	err := ch.Get(key, &size)
+	if err != nil {
+		img := getImage(url)
+		if img == nil {
+			return image.Point{0, 0}, errors.New("Cant get image")
+		}
+		bounds := img.Bounds()
+		size = bounds.Size()
+		ch.Set(key, size, 24*time.Hour)
 	}
-	bounds := img.Bounds()
-	return bounds.Size(), nil
+	fmt.Println(size)
+	return size, nil
 }
 
 func getImage(url string) image.Image {

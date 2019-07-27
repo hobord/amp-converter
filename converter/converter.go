@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"golang.org/x/net/html"
+
 	cache "github.com/hobord/amp-converter/cache"
 )
 
@@ -114,7 +115,7 @@ func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 }
 
 // Converter convert the html.Node tree to AMP node tree.
-func convertNode(n *html.Node, baseUrl string, ch cache.Cache,  deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
+func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
 	switch n.Type {
 	case html.ErrorNode:
 		*deleteNodes = append(*deleteNodes, n)
@@ -181,11 +182,21 @@ func convertNode(n *html.Node, baseUrl string, ch cache.Cache,  deleteNodes *[]*
 					return
 				}
 				return
+			case "IFRAME":
+				// check it is youtube video?
+				attribute := GetAttributeByName("src", n)
+				if attribute != nil || strings.HasPrefix(strings.ToLower(attribute.Val), "https://www.youtube.com/embed") {
+					// convert to youtube amp
+					if !YoutubeConverter(n) {
+						// conversion was fail, remove the image
+						*deleteNodes = append(*deleteNodes, n)
+					}
+				}
+
 			}
 			*deleteNodes = append(*deleteNodes, n)
 			return
 		}
-
 		// Some node type is partial allowed need conversion or check
 		switch nodeName {
 		case "INPUT":
