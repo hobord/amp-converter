@@ -92,6 +92,14 @@ var AllowedElements = []string{
 	"UL",
 	"VAR"}
 
+type toConvert struct {
+	node        *html.Node
+	baseUrl     string
+	ch          cache.Cache
+	deleteNodes *[]*html.Node
+	wg          *sync.WaitGroup
+}
+
 // Converter is convert html to amp
 func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 	doc, err := html.Parse(strings.NewReader(htmlDocument))
@@ -101,8 +109,15 @@ func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 
 	var wg sync.WaitGroup
 	deleteNodes := []*html.Node{}
+	// toHeader := []strings
 
-	convertNode(doc, baseUrl, ch, &deleteNodes, &wg)
+	// convertNode(doc, baseUrl, ch, &deleteNodes, &wg)
+	convertNode(toConvert{
+		doc,
+		baseUrl,
+		ch,
+		&deleteNodes,
+		&wg})
 	wg.Wait()
 
 	for _, n := range deleteNodes {
@@ -115,60 +130,61 @@ func Converter(htmlDocument string, baseUrl string, ch cache.Cache) string {
 }
 
 // Converter convert the html.Node tree to AMP node tree.
-func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
-	switch n.Type {
+// func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*html.Node, wg *sync.WaitGroup) {
+func convertNode(convertParams toConvert) {
+	switch convertParams.node.Type {
 	case html.ErrorNode:
-		*deleteNodes = append(*deleteNodes, n)
+		*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 	// case html.TextNode:
 	// case html.DocumentNode:
 	case html.ElementNode:
 		// check attributes
 		attributes := []html.Attribute{}
-		for i := range n.Attr {
+		for i := range convertParams.node.Attr {
 			// javascript is not allowed
-			if strings.HasPrefix(strings.ToLower(n.Attr[i].Val), "javascript:") {
+			if strings.HasPrefix(strings.ToLower(convertParams.node.Attr[i].Val), "javascript:") {
 				continue
 			}
 
 			// Attribute names starting with on (such as onclick or onmouseover) are disallowed in AMP HTML.
-			if strings.HasPrefix(strings.ToLower(n.Attr[i].Key), "on") {
+			if strings.HasPrefix(strings.ToLower(convertParams.node.Attr[i].Key), "on") {
 				continue
 			}
 
 			// XML-related attributes, such as xmlns, xml:lang, xml:base, and xml:space are disallowed in AMP HTML.
-			if strings.HasPrefix(strings.ToLower(n.Attr[i].Key), "xml") {
+			if strings.HasPrefix(strings.ToLower(convertParams.node.Attr[i].Key), "xml") {
 				continue
 			}
 			// Internal AMP attributes prefixed with i-amp- are disallowed in AMP HTML.
-			if strings.HasPrefix(strings.ToLower(n.Attr[i].Key), "i-amp-") {
+			if strings.HasPrefix(strings.ToLower(convertParams.node.Attr[i].Key), "i-amp-") {
 				continue
 			}
 
 			// check the classess
-			if strings.ToLower(n.Attr[i].Key) == "class" {
+			if strings.ToLower(convertParams.node.Attr[i].Key) == "class" {
 				classes := []string{}
-				for _, className := range strings.Fields(n.Attr[i].Val) {
+				for _, className := range strings.Fields(convertParams.node.Attr[i].Val) {
 					// Internal AMP class names prefixed with -amp- and i-amp- are disallowed in AMP HTML.
 					if strings.HasPrefix(className, "-amp-") || strings.HasPrefix(className, "i-amp-") {
 						continue
 					}
 					classes = append(classes, className)
 				}
-				n.Attr[i].Val = strings.Join(classes, " ")
+				convertParams.node.Attr[i].Val = strings.Join(classes, " ")
 			}
 
 			// Internal AMP IDs prefixed with -amp- and i-amp- are disallowed in AMP HTML.
-			if strings.ToLower(n.Attr[i].Key) == "id" {
-				if strings.HasPrefix(strings.ToLower(n.Attr[i].Val), "-amp-") || strings.HasPrefix(strings.ToLower(n.Attr[i].Val), "i-amp-") {
+			if strings.ToLower(convertParams.node.Attr[i].Key) == "id" {
+				if strings.HasPrefix(strings.ToLower(convertParams.node.Attr[i].Val), "-amp-") || strings.HasPrefix(strings.ToLower(convertParams.node.Attr[i].Val), "i-amp-") {
 					continue
 				}
 			}
 
-			attributes = append(attributes, n.Attr[i])
+			attributes = append(attributes, convertParams.node.Attr[i])
 		}
-		n.Attr = attributes
+		convertParams.node.Attr = attributes
 
-		nodeName := strings.ToUpper(n.Data)
+		nodeName := strings.ToUpper(convertParams.node.Data)
 		// if the node type not allowed then convert or remove
 		exists := inArray(nodeName, AllowedElements)
 		if exists < 0 {
@@ -176,25 +192,25 @@ func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*h
 			case "SCRIPT":
 				// script allowed inf the type is  "application/ld+json" or "text/plain"
 				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
-				attribute := GetAttributeByName("type", n)
+				attribute := GetAttributeByName("type", convertParams.node)
 				if attribute == nil || inArray(strings.ToUpper(attribute.Val), allowedTypes) < 0 {
-					*deleteNodes = append(*deleteNodes, n)
+					*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 					return
 				}
 				return
 			case "IFRAME":
 				// check it is youtube video?
-				attribute := GetAttributeByName("src", n)
+				attribute := GetAttributeByName("src", convertParams.node)
 				if attribute != nil || strings.HasPrefix(strings.ToLower(attribute.Val), "https://www.youtube.com/embed") {
 					// convert to youtube amp
-					if !YoutubeConverter(n) {
+					if !YoutubeConverter(convertParams.node) {
 						// conversion was fail, remove the image
-						*deleteNodes = append(*deleteNodes, n)
+						*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 					}
 				}
 
 			}
-			*deleteNodes = append(*deleteNodes, n)
+			*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 			return
 		}
 		// Some node type is partial allowed need conversion or check
@@ -202,21 +218,21 @@ func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*h
 		case "INPUT":
 			// "<input[type=image]>, <input[type=button]>, <input[type=password]>, <input[type=file]>" are invalid
 			disallowedTypes := []string{"IMAGE", "BUTTON", "PASSWORD", "FILE"}
-			attribute := GetAttributeByName("type", n)
+			attribute := GetAttributeByName("type", convertParams.node)
 			if attribute != nil && inArray(strings.ToUpper(attribute.Val), disallowedTypes) >= 0 {
-				*deleteNodes = append(*deleteNodes, n)
+				*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 				return
 			}
 		case "IMG":
 			// convert image tag to amp-img
-			wg.Add(1)
-			go func(n *html.Node, ch cache.Cache) {
+			convertParams.wg.Add(1)
+			go func(n *html.Node, baseUrl string, ch cache.Cache) {
 				if !ImageConverter(n, baseUrl, ch) {
 					// image conversion was fail, remove the image
-					*deleteNodes = append(*deleteNodes, n)
+					*convertParams.deleteNodes = append(*convertParams.deleteNodes, convertParams.node)
 				}
-				wg.Done()
-			}(n, ch)
+				convertParams.wg.Done()
+			}(convertParams.node, convertParams.baseUrl, convertParams.ch)
 			return
 		}
 
@@ -225,8 +241,13 @@ func convertNode(n *html.Node, baseUrl string, ch cache.Cache, deleteNodes *[]*h
 		// case html.scopeMarkerNode:
 	}
 
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		convertNode(c, baseUrl, ch, deleteNodes, wg)
+	for c := convertParams.node.FirstChild; c != nil; c = c.NextSibling {
+		convertNode(toConvert{
+			c,
+			convertParams.baseUrl,
+			convertParams.ch,
+			convertParams.deleteNodes,
+			convertParams.wg})
 	}
 }
 

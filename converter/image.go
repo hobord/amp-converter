@@ -105,7 +105,6 @@ func getImageSize(url string, ch cache.Cache) (image.Point, error) {
 		size = bounds.Size()
 		ch.Set(key, size, 24*time.Hour)
 	}
-	fmt.Println(size)
 	return size, nil
 }
 
