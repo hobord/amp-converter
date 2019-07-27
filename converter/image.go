@@ -42,6 +42,7 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 		attr.Val = baseURL + attr.Val
 	}
 
+	// Default the image is not responsive and we try using the attr sizes parameters
 	layoutResponsive := false
 	widthAttr := GetAttributeByName("width", n)
 	heightAttr := GetAttributeByName("height", n)
@@ -62,28 +63,18 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 		layoutResponsive = true
 	}
 
-	// ampImg := &html.Node{
-	// 	Parent:      n.Parent,
-	// 	PrevSibling: n.PrevSibling,
-	// 	NextSibling: n.NextSibling,
-	// 	Type:        n.Type,
-	// 	DataAtom:    n.DataAtom,
-	// 	Data:        "amp-img",
-	// 	Attr:        []html.Attribute{},
-	// }
-
 	if layoutResponsive {
 		size, error := getImageSize(attr.Val, ch)
 		if error != nil {
 			return false
 		}
 
-		if widthAttr.Val != "" && strings.Contains(widthAttr.Val, "%") {
-			// calculate ratio
-		} else {
-			widthAttr.Val = fmt.Sprintf("%d", size.X)
-			heightAttr.Val = fmt.Sprintf("%d", size.Y)
-		}
+		// if widthAttr.Val != "" && strings.Contains(widthAttr.Val, "%") {
+		// 	// calculate ratio
+		// } else {
+		widthAttr.Val = fmt.Sprintf("%d", size.X)
+		heightAttr.Val = fmt.Sprintf("%d", size.Y)
+		// }
 
 		n.Attr = append(n.Attr, html.Attribute{"", "layout", "responsive"}) // TODO: check if is already exists
 	}
