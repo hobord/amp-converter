@@ -1,14 +1,9 @@
-// Copyright (c) 2012-2016 The Revel Framework Authors, All rights reserved.
-// Revel Framework source code and usage is governed by a MIT style
-// license that can be found in the LICENSE file.
-
 package cache
 
 import (
 	"time"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/revel/revel"
 )
 
 // RedisCache wraps the Redis client to meet the Cache interface.
@@ -18,17 +13,17 @@ type RedisCache struct {
 }
 
 // NewRedisCache returns a new RedisCache with given parameters
-// until redigo supports sharding/clustering, only one host will be in hostList
 func NewRedisCache(host string, password string, defaultExpiration time.Duration) RedisCache {
+	// TODO: make configurable by env environment variable
 	var pool = &redis.Pool{
-		MaxIdle:     revel.Config.IntDefault("cache.redis.maxidle", 5),
-		MaxActive:   revel.Config.IntDefault("cache.redis.maxactive", 0),
-		IdleTimeout: time.Duration(revel.Config.IntDefault("cache.redis.idletimeout", 240)) * time.Second,
+		MaxIdle:     5,
+		MaxActive:   0,
+		IdleTimeout: time.Duration(240) * time.Second,
 		Dial: func() (redis.Conn, error) {
-			protocol := revel.Config.StringDefault("cache.redis.protocol", "tcp")
-			toc := time.Millisecond * time.Duration(revel.Config.IntDefault("cache.redis.timeout.connect", 10000))
-			tor := time.Millisecond * time.Duration(revel.Config.IntDefault("cache.redis.timeout.read", 5000))
-			tow := time.Millisecond * time.Duration(revel.Config.IntDefault("cache.redis.timeout.write", 5000))
+			protocol := "tcp"
+			toc := time.Millisecond * time.Duration(10000)
+			tor := time.Millisecond * time.Duration(5000)
+			tow := time.Millisecond * time.Duration(5000)
 			c, err := redis.Dial(protocol, host,
 				redis.DialConnectTimeout(toc),
 				redis.DialReadTimeout(tor),

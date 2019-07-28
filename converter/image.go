@@ -49,8 +49,8 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 	if widthAttr == nil || heightAttr == nil {
 		layoutResponsive = true
 
-		n.Attr = append(n.Attr, html.Attribute{"", "width", ""})
-		n.Attr = append(n.Attr, html.Attribute{"", "height", ""})
+		AddAttribute(n, "width", "")
+		AddAttribute(n, "height", "")
 		widthAttr = GetAttributeByName("width", n)
 		heightAttr = GetAttributeByName("height", n)
 	}
@@ -76,7 +76,7 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 		heightAttr.Val = fmt.Sprintf("%d", size.Y)
 		// }
 
-		n.Attr = append(n.Attr, html.Attribute{"", "layout", "responsive"}) // TODO: check if is already exists
+		AddAttribute(n, "layout", "responsive")
 	}
 
 	n.Data = "amp-img"

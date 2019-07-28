@@ -7,7 +7,6 @@ import (
 
 	cache "github.com/hobord/amp-converter/cache"
 	amp "github.com/hobord/amp-converter/converter"
-
 )
 
 func main() {
@@ -28,7 +27,7 @@ func main() {
 			<image src="http://p.agnihotry.com/images/avatar-icon.jpeg">
 			<span id="i-amp-">dsadas</span>
 			<p onmoUse="dss" class="-amp- bold">
-			<iframe width="560" height="315" src="https://www.youtube.com/embed/9nqcFhD3wz0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+			<iframe width="560" src="https://www.youtube.com/embed/9nqcFhD3wz0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 			<p xml="saa">fd</p>
 				<image src="/images/avatar-icon.jpeg">
 				paragraph text wit some <em class="underline">inline</em> elements
@@ -38,7 +37,12 @@ func main() {
 	baseURL := "http://p.agnihotry.com"
 	var ch cache.Cache
 	ch = newInMemoryCache(60 * time.Second)
-	fmt.Println(amp.Converter(htmlDocument, baseURL, ch))
+	document, ampComponents := amp.Converter(htmlDocument, baseURL, ch)
+	fmt.Println(document)
+	for _, component := range ampComponents {
+		fmt.Println(component.Script())
+	}
+
 }
 
 var newInMemoryCache = func(defaultExpiration time.Duration) cache.Cache {
