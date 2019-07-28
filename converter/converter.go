@@ -226,6 +226,7 @@ func convertNode(node *html.Node, ctx convertContext) {
 				allowedTypes := []string{"APPLICATION/LD+JSON", "TEXT/PLAIN"}
 				attribute := GetAttributeByName("type", node)
 				if attribute != nil && inArray(strings.ToUpper(attribute.Val), allowedTypes) >= 0 {
+					// Keep it the node
 					return
 				}
 			case "IFRAME":
@@ -234,6 +235,7 @@ func convertNode(node *html.Node, ctx convertContext) {
 				if attribute != nil || strings.HasPrefix(strings.ToLower(attribute.Val), "https://www.youtube.com/embed") {
 					// convert to youtube amp
 					if YoutubeConverter(node, ctx.ampComponents) {
+						// Converted to amp-youtube component, keep it the node.
 						return
 					}
 				}

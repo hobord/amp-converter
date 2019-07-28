@@ -1,0 +1,40 @@
+
+syntax = "proto3";
+
+service DSessionService {
+  rpc getSession(GetSessionMessage) returns (Session) {}
+  rpc createSession(ttl) returns (Session) {}
+  rpc addValueToSession(sessionId, key, value, ttl) returns (bool) {}
+  rpc invalidateSession(sessionId) returns (bool) {}
+  rpc invalidateSessionValue(sessionId, key) returns (bool) {}
+}
+
+enum SecurityType {
+  PUBLIC = 0;
+  PRIVATE = 1;
+}
+
+message GetSessionMessage {
+  string id = 1;
+  optional repeated Security = 2;
+}
+
+message AddValueToSessionMessage {
+  string id = 1; // session id
+  string key = 2; // key in session
+  string value = 3; // value
+  optional int64 ttl = 4; // ttl of this key value pair
+  optional repeated Security = 5;
+}
+
+message SessionValue {
+  string key = 1; // key in session
+  string value = 2; // value
+  optional int64 ttl = 3; // ttl of this key value pair
+}
+
+message Session {
+  string id = 1;
+  repeated SessionValue values = 2;
+}
+

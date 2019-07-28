@@ -53,7 +53,6 @@ func YoutubeConverter(n *html.Node, ampComponents *AmpComponents) bool {
 	}
 
 	if layoutResponsive {
-		// n.Attr = append(n.Attr, html.Attribute{"", "layout", "responsive"})
 		AddAttribute(n, "layout", "responsive")
 	}
 	n.Data = "amp-youtube"
