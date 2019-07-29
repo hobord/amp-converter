@@ -179,7 +179,7 @@ func convertNode(node *html.Node, ctx convertContext) {
 			}
 
 			// Attribute names starting with on (such as onclick or onmouseover) are disallowed in AMP HTML.
-			if strings.HasPrefix(strings.ToLower(node.Attr[i].Key), "on") {
+			if strings.HasPrefix(strings.ToLower(node.Attr[i].Key), "on") && strings.ToLower(node.Attr[i].Key) != "on" {
 				continue
 			}
 
