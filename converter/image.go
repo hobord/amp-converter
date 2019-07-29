@@ -89,12 +89,12 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 	}
 
 	newAttr = append(newAttr, *srcAttr)
-	if layoutAttr.Val != "fixed-height" {
+	if layoutAttr.Val != "fixed-height" && layoutAttr.Val != "fill" && layoutAttr.Val != "nodisplay" {
 		if widthAttr != nil {
 			newAttr = append(newAttr, *widthAttr)
 		}
 	}
-	if heightAttr != nil {
+	if heightAttr != nil && layoutAttr.Val != "fill" && layoutAttr.Val != "nodisplay" {
 		newAttr = append(newAttr, *heightAttr)
 	}
 	if layoutAttr != nil && layoutAttr.Val != "" {
