@@ -32,64 +32,120 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 		use the title attribute if is exists
 	*/
 
-	attr := GetAttributeByName("src", n)
-	if attr == nil {
+	srcAttr := GetAttributeByName("src", n)
+	if srcAttr == nil {
 		return false
 	}
-	if attr.Val == "" {
+	if srcAttr.Val == "" {
 		return false
 	}
 
 	// Relative or absolute path?
-	if !strings.HasPrefix(strings.ToLower(attr.Val), "http") {
-		if string(attr.Val[0]) == "/" {
+	if !strings.HasPrefix(strings.ToLower(srcAttr.Val), "http") {
+		if string(srcAttr.Val[0]) == "/" {
 			u, err := url.Parse(baseURL)
 			if err != nil {
 				log.Fatal(err)
 			}
-			attr.Val = u.Scheme + "://" + u.Host + attr.Val
+			srcAttr.Val = u.Scheme + "://" + u.Host + srcAttr.Val
 		} else {
-			attr.Val = baseURL + attr.Val
+			srcAttr.Val = baseURL + srcAttr.Val
 		}
 	}
+
+	newAttr := []html.Attribute{}
 
 	// Default the image is not responsive and we try using the attr sizes parameters
-	layoutResponsive := false
+	layoutAttr := GetAttributeByName("layout", n)
+	if layoutAttr == nil {
+		AddAttribute(n, "layout", "")
+		layoutAttr = GetAttributeByName("layout", n)
+	}
 	widthAttr := GetAttributeByName("width", n)
 	heightAttr := GetAttributeByName("height", n)
-	if widthAttr == nil || heightAttr == nil {
-		layoutResponsive = true
 
-		AddAttribute(n, "width", "")
-		AddAttribute(n, "height", "")
-		widthAttr = GetAttributeByName("width", n)
-		heightAttr = GetAttributeByName("height", n)
-	}
+	if layoutAttr.Val != "fill" && layoutAttr.Val != "nodisplay" {
+		var size image.Point
+		var er error
+		// we need the height
+		if heightAttr == nil || heightAttr.Val == "" || strings.Contains(heightAttr.Val, "%") {
+			size, er = getImageSize(srcAttr.Val, ch)
+			if er != nil {
+				return false
+			}
+			AddAttribute(n, "height", fmt.Sprintf("%d", size.Y))
+			heightAttr = GetAttributeByName("height", n)
 
-	if widthAttr.Val == "" || strings.Contains(widthAttr.Val, "%") {
-		layoutResponsive = true
-	}
-
-	if heightAttr.Val == "" || strings.Contains(heightAttr.Val, "%") {
-		layoutResponsive = true
-	}
-
-	if layoutResponsive {
-		size, error := getImageSize(attr.Val, ch)
-		if error != nil {
-			return false
+			if layoutAttr.Val == "" {
+				layoutAttr.Val = "responsive"
+			}
 		}
 
-		// if widthAttr.Val != "" && strings.Contains(widthAttr.Val, "%") {
-		// 	// calculate ratio
-		// } else {
-		widthAttr.Val = fmt.Sprintf("%d", size.X)
-		heightAttr.Val = fmt.Sprintf("%d", size.Y)
-		// }
-
-		AddAttribute(n, "layout", "responsive")
+		// "fixed-height" is not required the width
+		if layoutAttr.Val == "" || layoutAttr.Val == "fixed" || layoutAttr.Val == "intrinsic" || layoutAttr.Val == "responsive" {
+			// width and height are mandatory
+			if widthAttr == nil || widthAttr.Val == "" || strings.Contains(widthAttr.Val, "%") {
+				if size.X == 0 {
+					size, er = getImageSize(srcAttr.Val, ch)
+					if er != nil {
+						return false
+					}
+				}
+				AddAttribute(n, "width", fmt.Sprintf("%d", size.X))
+				widthAttr = GetAttributeByName("width", n)
+				if layoutAttr.Val == "" {
+					layoutAttr.Val = "responsive"
+				}
+			}
+		}
 	}
 
+	newAttr = append(newAttr, *srcAttr)
+	if layoutAttr.Val != "fixed-height" && layoutAttr.Val != "fill" && layoutAttr.Val != "nodisplay" {
+		if widthAttr != nil {
+			newAttr = append(newAttr, *widthAttr)
+		}
+	}
+	if heightAttr != nil && layoutAttr.Val != "fill" && layoutAttr.Val != "nodisplay" {
+		newAttr = append(newAttr, *heightAttr)
+	}
+	if layoutAttr != nil && layoutAttr.Val != "" {
+		newAttr = append(newAttr, *layoutAttr)
+	}
+	titleAttr := GetAttributeByName("title", n)
+	if titleAttr != nil && titleAttr.Val != "" {
+		newAttr = append(newAttr, *titleAttr)
+	}
+	altAttr := GetAttributeByName("alt", n)
+	if altAttr != nil && altAttr.Val != "" {
+		newAttr = append(newAttr, *altAttr)
+	}
+	classAttr := GetAttributeByName("class", n)
+	if classAttr != nil && classAttr.Val != "" {
+		newAttr = append(newAttr, *classAttr)
+	}
+	mediaAttr := GetAttributeByName("media", n)
+	if mediaAttr != nil && mediaAttr.Val != "" {
+		newAttr = append(newAttr, *mediaAttr)
+	}
+	sizesAttr := GetAttributeByName("sizes", n)
+	if sizesAttr != nil && sizesAttr.Val != "" {
+		newAttr = append(newAttr, *sizesAttr)
+	}
+	srcsetAttr := GetAttributeByName("srcset", n)
+	if srcsetAttr != nil && srcsetAttr.Val != "" {
+		newAttr = append(newAttr, *srcsetAttr)
+	}
+	heightsAttr := GetAttributeByName("heights", n)
+	if heightsAttr != nil && heightsAttr.Val != "" {
+		newAttr = append(newAttr, *heightsAttr)
+	}
+	noloadingAttr := GetAttributeByName("noloading", n)
+	if noloadingAttr != nil {
+		newAttr = append(newAttr, *noloadingAttr)
+	}
+
+	n.Attr = newAttr
 	n.Data = "amp-img"
 	return true
 }
