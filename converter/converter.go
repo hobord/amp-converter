@@ -232,14 +232,19 @@ func convertNode(node *html.Node, ctx convertContext) {
 			case "IFRAME":
 				// check it is youtube video?
 				attribute := GetAttributeByName("src", node)
-				if attribute != nil || strings.HasPrefix(strings.ToLower(attribute.Val), "https://www.youtube.com/embed") {
-					// convert to youtube amp
-					if YoutubeConverter(node, ctx.ampComponents) {
-						// Converted to amp-youtube component, keep it the node.
-						return
+				if attribute != nil {
+					if strings.HasPrefix(strings.ToLower(attribute.Val), "https://www.youtube.com/embed") {
+						// convert to youtube amp
+						if YoutubeConverter(node, ctx.ampComponents) {
+							// Converted to amp-youtube component, keep it the node.
+							return
+						}
+					} else {
+						if IframeConverter(node, ctx.ampComponents) {
+							return
+						}
 					}
 				}
-
 			}
 			*ctx.deleteNodes = append(*ctx.deleteNodes, node)
 			return
