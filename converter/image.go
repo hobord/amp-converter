@@ -7,7 +7,9 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -37,9 +39,18 @@ func ImageConverter(n *html.Node, baseURL string, ch cache.Cache) bool {
 	if attr.Val == "" {
 		return false
 	}
-	// TODO: check the url is relative? if yes, then add baseURL
+
+	// Relative or absolute path?
 	if !strings.HasPrefix(strings.ToLower(attr.Val), "http") {
-		attr.Val = baseURL + attr.Val
+		if string(attr.Val[0]) == "/" {
+			u, err := url.Parse(baseURL)
+			if err != nil {
+				log.Fatal(err)
+			}
+			attr.Val = u.Scheme + "://" + u.Host + attr.Val
+		} else {
+			attr.Val = baseURL + attr.Val
+		}
 	}
 
 	// Default the image is not responsive and we try using the attr sizes parameters
